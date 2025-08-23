@@ -1,61 +1,47 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { STORAGE_KEY, newId } from "./types";
+import type { Clip } from "./types";
+import TopBar from "./components/TopBar";
+import AddClipForm from "./components/AddClipForm";
+import AddClipOverlay from "./components/AddClipOverlay";
+import ClipCardContainer from "./components/ClipCardContainer";
 
-const STORAGE_KEY = "QuickClips";
+export default function App() {
+  const [clips, setClips] = useState<Clip[]>(() => {
+    try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); } catch { return []; }
+  });
+  const [overlayOpen, setOverlayOpen] = useState(false);
 
-function App() {
-  const [buttons, setButtons] = useState<string[]>([]);
+  useEffect(() => { localStorage.setItem(STORAGE_KEY, JSON.stringify(clips)); }, [clips]);
 
-  useEffect(() => {
-    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-    setButtons(saved);
-  }, []);
+  const addClip = (text: string) =>
+    setClips((prev) => [...prev, { id: newId(), text: text.trim(), createdAt: Date.now() }]);
 
-  const addButton = (text: string) => {
-    if (!text.trim()) return;
-    const updated = [...buttons, text];
-    setButtons(updated);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-  };
+  const updateClip = (id: string, text: string) =>
+    setClips((prev) => prev.map(c => c.id === id ? { ...c, text: text.trim(), updatedAt: Date.now() } : c));
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-  };
+  const deleteClip = (id: string) =>
+    setClips((prev) => prev.filter(c => c.id !== id));
 
-  const removeButton = (text: string) => {
-    const updated = buttons.filter((t) => t !== text);
-    setButtons(updated);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-  };
+  const copyClip = (text: string) => navigator.clipboard.writeText(text);
 
   return (
-    <div style={{ margin: "20px", fontFamily: "Arial" }}>
-      <h2>Create Clipboard Button</h2>
-      <input id="textInput" type="text" placeholder="Enter text" />
-      <button
-        onClick={() => {
-          const input = document.getElementById("textInput") as HTMLInputElement;
-          addButton(input.value);
-          input.value = "";
-        }}
-      >
-        Add Button
-      </button>
+    <div className="min-h-dvh bg-gray-50 text-gray-900">
+      <TopBar onOpenOverlay={() => setOverlayOpen(true)} />
 
-      <div style={{ marginTop: "20px" }}>
-        {buttons.map((text, i) => (
-          <div key={i} style={{ marginBottom: "10px" }}>
-            <button onClick={() => copyToClipboard(text)}>{text}</button>
-            <button
-              onClick={() => removeButton(text)}
-              style={{ marginLeft: "8px" }}
-            >
-              ❌
-            </button>
-          </div>
-        ))}
-      </div>
+      {/* Overlay used on all breakpoints */}
+      <AddClipOverlay open={overlayOpen} onClose={() => setOverlayOpen(false)}>
+        <AddClipForm onSubmit={(t) => { addClip(t); setOverlayOpen(false); }} autoFocus />
+      </AddClipOverlay>
+
+      <main className="container mx-auto px-4 py-6">
+        <ClipCardContainer
+          clips={clips}
+          onCopy={copyClip}
+          onDelete={deleteClip}
+          onUpdate={updateClip}
+        />
+      </main>
     </div>
   );
 }
-
-export default App;
