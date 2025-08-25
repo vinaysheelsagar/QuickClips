@@ -13,5 +13,5 @@ export default defineConfig({
     react(),
     tailwindcss()
   ],
-  base: '/quickclips/'
+  base: '/QuickClips/'
 })
